@@ -103,14 +103,18 @@ work — a duplicate is worse than reuse:
 ```bash
 latchkey curl -X POST https://api.linear.app/graphql \
   -H 'Content-Type: application/json' \
-  -d '{"query":"query { searchIssues(term: \"<keywords>\") { nodes { identifier title url state { name type } assignee { displayName } team { key } } } }"}'
+  -d '{"query":"query { searchIssues(term: \"<keywords>\", first: 10) { nodes { identifier title url state { name type } assignee { displayName } team { key } } } }"}'
 ```
 
-Search a few keyword variations drawn from the scope. If a plausible match
-exists — especially one in an actionable state — STOP and present it. Ask
-whether to **adopt the existing ticket** (drop into the normal flow on it,
-starting at Step 1) or **create a new one anyway**. Do not create silently over
-a likely duplicate.
+`searchIssues` matches loosely (any term) and is unranked-by-relevance, so
+always cap it with `first:` and judge the hits yourself — most will be
+noise. Search a few keyword variations drawn from the scope, and weight matches
+by how well the title/team fit *and* by state: a same-team ticket in an
+actionable state (`unstarted`/`started`) is a real overlap; long-closed
+(`completed`/`canceled`) or unrelated-team hits usually are not. If a plausible
+live match exists, STOP and present it. Ask whether to **adopt the existing
+ticket** (drop into the normal flow on it, starting at Step 1) or **create a new
+one anyway**. Do not create silently over a likely duplicate.
 
 ### 0d — Draft, confirm, then create
 
@@ -276,7 +280,7 @@ state.
 | Need | Endpoint / field |
 |------|------------------|
 | Issue by human key | `issue(id: "ENG-123")` (identifier works) |
-| Search for duplicates | `searchIssues(term: "<keywords>") { nodes { identifier title state { type } } }` |
+| Search for duplicates | `searchIssues(term: "<keywords>", first: 10)` — loose match, cap + rank yourself |
 | Create a ticket (`new`) | `issueCreate(input: { teamId, title, description, assigneeId, stateId })` |
 | List teams | `teams { nodes { id key name } }` |
 | Mutation target | issue UUID (`issue.id`), not the identifier |
