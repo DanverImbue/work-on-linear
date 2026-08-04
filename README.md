@@ -121,13 +121,13 @@ skills/
 2. **Two entries, one track** — an identifier adopts an existing ticket; `new` creates one first
    (infer the work → search for overlaps → confirm → create). Once the ticket is settled, both paths
    collapse to the single implement-and-review flow.
-2. **Claim explicitly** — assign to the user and move to In Progress in one mutation, only after the gate
+3. **Claim explicitly** — assign to the user and move to In Progress in one mutation, only after the gate
    passes.
-3. **State type, not display name** — decisions key off Linear's `state.type`
+4. **State type, not display name** — decisions key off Linear's `state.type`
    (`triage`/`backlog`/`unstarted`/`started`/`completed`/`canceled`), which is stable across teams.
-4. **Traceable branches** — branches are named `<user>/<IDENTIFIER>-<short-kebab-description>`, preferring
+5. **Traceable branches** — branches are named `<user>/<IDENTIFIER>-<short-kebab-description>`, preferring
    the user's existing convention.
-5. **Stop for local review** — verify with the repo's own test/lint/build, report a summary, and never
+6. **Stop for local review** — verify with the repo's own test/lint/build, report a summary, and never
    push or open a PR without explicit permission.
 
 ## Contributing
