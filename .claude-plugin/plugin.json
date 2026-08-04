@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "work-on-linear",
+  "displayName": "Work on Linear",
+  "version": "1.0.0",
+  "description": "Work end-to-end on a Linear ticket: fetch and understand it, gate on its workflow state, claim it, set up a named branch, implement it following repo conventions, and stop for local review without opening a PR.",
+  "author": {
+    "name": "Danver Braganza"
+  },
+  "homepage": "https://github.com/DanverImbue/work-on-linear",
+  "repository": "https://github.com/DanverImbue/work-on-linear",
+  "license": "MIT"
+}

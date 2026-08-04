@@ -1,0 +1,18 @@
+{
+  "name": "work-on-linear-marketplace",
+  "owner": {
+    "name": "Danver Braganza"
+  },
+  "plugins": [
+    {
+      "name": "work-on-linear",
+      "source": "./",
+      "displayName": "Work on Linear",
+      "description": "Work end-to-end on a Linear ticket: fetch and understand it, gate on its workflow state, claim it, set up a named branch, implement it following repo conventions, and stop for local review without opening a PR.",
+      "version": "1.0.0",
+      "homepage": "https://github.com/DanverImbue/work-on-linear",
+      "repository": "https://github.com/DanverImbue/work-on-linear",
+      "license": "MIT"
+    }
+  ]
+}
