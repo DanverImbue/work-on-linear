@@ -88,9 +88,13 @@ a Linear issue URL, or ask it to "work on" / "pick up" / "start" a ticket:
 ```
 /work-on-linear ENG-123
 /work-on-linear https://linear.app/<team>/issue/ENG-123/some-title
+/work-on-linear new [TEAM] [prompt]
 ```
 
-If invoked without an identifier, the agent asks which ticket to work on.
+Given an identifier or URL, the agent adopts that ticket. Invoked as `new` — for
+work that has no ticket yet — it infers the current unit of work, searches Linear
+for overlapping tickets, drafts one for your confirmation, creates it, and then
+falls into the same flow. Invoked bare, it asks which ticket to work on.
 
 ## Preconditions
 
@@ -112,8 +116,11 @@ skills/
 
 ## Key ideas
 
-1. **Gate before acting** — unclear scope, wrong ticket state, or a foreign in-progress branch stop the
-   agent for a blocking question instead of a guess.
+1. **Gate before acting** — unclear scope, wrong ticket state, a foreign in-progress branch, or a
+   likely-duplicate ticket stop the agent for a blocking question instead of a guess.
+2. **Two entries, one track** — an identifier adopts an existing ticket; `new` creates one first
+   (infer the work → search for overlaps → confirm → create). Once the ticket is settled, both paths
+   collapse to the single implement-and-review flow.
 2. **Claim explicitly** — assign to the user and move to In Progress in one mutation, only after the gate
    passes.
 3. **State type, not display name** — decisions key off Linear's `state.type`

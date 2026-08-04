@@ -6,7 +6,10 @@ description: |
   user + move to In Progress), set up a properly named branch, implement it
   following repo conventions, and stop for local review without opening a PR.
   Use when given a Linear issue identifier (e.g. ENG-123), a Linear issue URL,
-  or when asked to "work on" / "pick up" / "start" a Linear ticket.
+  or when asked to "work on" / "pick up" / "start" a Linear ticket. Also handles
+  `new` (`/work-on-linear new [TEAM] [prompt]`) when no ticket exists yet:
+  infer the current work, search for overlapping tickets, create one, then
+  continue the same flow.
   Not project-specific. Requires latchkey with Linear credentials.
 ---
 
@@ -17,14 +20,24 @@ workspace. The workflow is gated: unclear tickets get clarified first, tickets
 in the wrong state get confirmed first, and finished work stops for local
 review — never a PR.
 
+There are two ways in, and they converge. Given a ticket identifier, the skill
+adopts that ticket (Step 1 onward). Invoked as `new`, it first *creates* a
+ticket for work that has none (the **Entry `new`** section below), then falls
+into the same single track. Once the ticket is settled, the entry point no
+longer matters — there is one path from there on.
+
 ## Usage
 
 ```
 /work-on-linear ENG-123
 /work-on-linear https://linear.app/<team>/issue/ENG-123/some-title
+/work-on-linear new [TEAM] [prompt]
 ```
 
-If invoked without an identifier, ask the user which ticket to work on.
+If invoked with an identifier or URL, adopt that ticket (Step 1 onward). If
+invoked as `new`, create a ticket first (see **Entry `new`** below), then
+continue the same flow. If invoked bare — no identifier and no `new` — ask the
+user which ticket to work on, or whether they meant `new`.
 
 ## Preconditions
 
@@ -37,6 +50,88 @@ If invoked without an identifier, ask the user which ticket to work on.
   If not valid, follow the latchkey skill to set them up
   (`latchkey auth browser linear` or `latchkey auth set linear -H "Authorization: <token>"`)
   before continuing.
+
+## Entry `new` — no ticket exists yet
+
+Invoked as `/work-on-linear new [TEAM] [prompt]`. Use this when the user is
+already doing work that has no Linear ticket. This entry *creates* the ticket,
+then falls into the single track below.
+
+`new` subsumes Steps 1–3: by the end of it you have a well-understood ticket
+that is assigned to the user and In Progress. Do **not** then re-run the state
+gate (Step 2) or re-claim (Step 3) — continue at **Step 4**. If this entry does
+not apply (you were given an identifier), skip straight to Step 1.
+
+### 0a — Determine what the user is working on
+
+Build a picture of the current logical unit of work from, in order:
+
+1. The `[prompt]` argument, if given — the user's own description wins.
+2. The working tree: `git status`, `git diff` (staged + unstaged), and the
+   current branch name.
+3. Commits on this branch not yet on its base (`git log`), and recently edited
+   files.
+
+Synthesize **one** logical problem — the ticket should cover a single coherent
+change, not the sum of every unrelated edit in the tree. If the workspace shows
+several unrelated threads, or you cannot tell what the work is, STOP and ask the
+user to describe the ticket rather than guessing.
+
+### 0b — Resolve the team
+
+The ticket needs a team. Resolve in order:
+
+1. The `[TEAM]` argument (a team key like `ENG`, or a name), if given.
+2. Infer from the repo: an existing convention — branch prefixes referencing a
+   team key, prior tickets, a documented default team.
+3. If still ambiguous, list the user's teams and ask.
+
+```bash
+latchkey curl -X POST https://api.linear.app/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"query { teams { nodes { id key name } } }"}'
+```
+
+Keep the team's UUID; you will also need its In Progress state id (the states
+query in Step 3).
+
+### 0c — Search for overlapping tickets (caution gate)
+
+Before creating anything, search Linear for a ticket that may already cover this
+work — a duplicate is worse than reuse:
+
+```bash
+latchkey curl -X POST https://api.linear.app/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"query { searchIssues(term: \"<keywords>\") { nodes { identifier title url state { name type } assignee { displayName } team { key } } } }"}'
+```
+
+Search a few keyword variations drawn from the scope. If a plausible match
+exists — especially one in an actionable state — STOP and present it. Ask
+whether to **adopt the existing ticket** (drop into the normal flow on it,
+starting at Step 1) or **create a new one anyway**. Do not create silently over
+a likely duplicate.
+
+### 0d — Draft, confirm, then create
+
+Draft the ticket: title, description (what and why; acceptance criteria if
+clear), team, and priority if evident. Creating a Linear ticket is
+outward-facing and awkward to undo, so **show the draft and the overlap-search
+result to the user and get explicit confirmation before creating it.** This is
+also where a missing or thin `[prompt]` gets corrected — propose, and let the
+user amend.
+
+On confirmation, create the ticket already assigned to the user and In Progress
+(this folds in Step 3's claim; get the viewer id and In Progress state id as in
+Step 3):
+
+```bash
+latchkey curl -X POST https://api.linear.app/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { issueCreate(input: { teamId: \"<TEAM_UUID>\", title: \"<title>\", description: \"<description>\", assigneeId: \"<VIEWER_UUID>\", stateId: \"<STARTED_STATE_UUID>\" }) { success issue { id identifier url state { name } assignee { displayName } } } }"}'
+```
+
+Record the returned `issue.id` and `identifier`, then continue at **Step 4**.
 
 ## Step 1 — Fetch and understand the ticket
 
@@ -181,6 +276,9 @@ state.
 | Need | Endpoint / field |
 |------|------------------|
 | Issue by human key | `issue(id: "ENG-123")` (identifier works) |
+| Search for duplicates | `searchIssues(term: "<keywords>") { nodes { identifier title state { type } } }` |
+| Create a ticket (`new`) | `issueCreate(input: { teamId, title, description, assigneeId, stateId })` |
+| List teams | `teams { nodes { id key name } }` |
 | Mutation target | issue UUID (`issue.id`), not the identifier |
 | State machine | `state.type`: `triage` / `backlog` / `unstarted` / `started` / `completed` / `canceled` |
 | Team states | `team(id:) { states { nodes { id name type position } } }` |
